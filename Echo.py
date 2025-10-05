@@ -1,10 +1,11 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import yt_dlp
 import asyncio
 import os
 from dotenv import load_dotenv
 import traceback
+import itertools # New import for cycling through statuses
 
 load_dotenv() # Loads the .env file with your token
 
@@ -21,6 +22,23 @@ FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
 }
+
+# --- NEW: ROTATING STATUS SETUP ---
+# Create a list of statuses for the bot to cycle through
+statuses = [
+    "Listening to your requests!",
+    "I personally love EDM",
+    "Listening to @7eighty4",
+    "Type !play <song name>",
+    "Echoing"
+]
+status_cycler = itertools.cycle(statuses)
+
+@tasks.loop(seconds=15)
+async def change_status():
+    """Cycles through the bot's statuses every 15 seconds."""
+    new_status = next(status_cycler)
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=new_status))
 
 # --- HELPER FUNCTION TO START PLAYBACK ---
 async def play_next(ctx):
@@ -99,6 +117,7 @@ class PlayerControls(discord.ui.View):
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
+    change_status.start() # Start the status cycling task
 
 @bot.command()
 async def join(ctx):
@@ -217,6 +236,7 @@ async def skip(ctx):
 async def stop(ctx):
     if ctx.voice_client:
         bot.queues[ctx.guild.id] = []
+        bot.queues[ctx.guild.id].clear()
         ctx.voice_client.stop()
         await ctx.voice_client.disconnect()
         await ctx.send("⏹️ Playback stopped, queue cleared, and disconnected.")
