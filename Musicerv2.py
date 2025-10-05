@@ -15,15 +15,10 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 # --- GLOBAL STATE ---
 bot.queues = {}
 
-# --- FFMPEG & YTDL OPTIONS ---
+# --- FFMPEG OPTIONS ---
 FFMPEG_OPTIONS = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
-}
-YDL_OPTIONS = {
-    'format': 'bestaudio[ext=m4a]/bestaudio/best',
-    'noplaylist': 'True',
-    'quiet': True,
 }
 
 # --- HELPER FUNCTION TO START PLAYBACK ---
@@ -119,8 +114,26 @@ async def play(ctx, *, search: str):
 
     guild_id = ctx.guild.id
     await ctx.send(f"🔎 Searching for: **{search}**...")
+
+    # --- YDL OPTIONS WITH COOKIE HANDLING ---
+    # Create the options dictionary for this specific request
+    ydl_opts = {
+        'format': 'bestaudio[ext=m4a]/bestaudio/best',
+        'noplaylist': 'True',
+        'quiet': True,
+    }
+
+    # Write cookies to a file if they exist in the environment variables
+    cookie_file_path = "cookies.txt"
+    if 'YOUTUBE_COOKIES' in os.environ:
+        with open(cookie_file_path, 'w') as f:
+            f.write(os.environ['YOUTUBE_COOKIES'])
+        # Tell yt-dlp to use the cookies file
+        ydl_opts['cookiefile'] = cookie_file_path
+    # --- END OF YDL OPTIONS ---
+
     loop = asyncio.get_event_loop()
-    with yt_dlp.YoutubeDL(YDL_OPTIONS) as ydl:
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = await loop.run_in_executor(None, lambda: ydl.extract_info(f"ytsearch:{search}", download=False))
             if 'entries' not in info or not info['entries']:
