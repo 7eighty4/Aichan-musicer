@@ -1,15 +1,15 @@
-import nextcord
-from nextcord.ext import commands
+import discord
+from discord.ext import commands
 import yt_dlp
 import asyncio
 import os
 from dotenv import load_dotenv
-import traceback # Import the traceback module
+import traceback
 
 load_dotenv() # Loads the .env file with your token
 
 # --- BOT SETUP ---
-intents = nextcord.Intents.default()
+intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -29,12 +29,12 @@ async def play_next(ctx):
         song = bot.queues[guild_id].pop(0)
         
         try:
-            source = nextcord.FFmpegPCMAudio(song['stream_url'], **FFMPEG_OPTIONS)
+            source = discord.FFmpegPCMAudio(song['stream_url'], **FFMPEG_OPTIONS)
             
-            embed = nextcord.Embed(
+            embed = discord.Embed(
                 title="🎵 Now Playing",
                 description=f"**[{song['title']}]({song['webpage_url']})**",
-                color=nextcord.Color.green()
+                color=discord.Color.green()
             )
             embed.set_thumbnail(url=song['thumbnail'])
             embed.add_field(name="Requested by", value=song['requester'].mention)
@@ -44,55 +44,50 @@ async def play_next(ctx):
             await ctx.send(embed=embed, view=PlayerControls(ctx))
 
         except Exception as e:
-            # Send a generic error to Discord
-            error_embed = nextcord.Embed(title="❌ Playback Error", description="An unknown error occurred. Please check the logs for details.", color=nextcord.Color.red())
+            error_embed = discord.Embed(title="❌ Playback Error", description="An unknown error occurred. Please check the logs for details.", color=discord.Color.red())
             await ctx.send(embed=error_embed)
-            
-            # Print the FULL detailed error to your Railway logs
             print("--- An error occurred in play_next ---")
             traceback.print_exc()
             print("------------------------------------")
-            
-            # Try to play the next song in the queue if there is one
             await play_next(ctx)
 
     else:
-        await ctx.send(embed=nextcord.Embed(description="✅ Queue finished! I'm leaving the channel.", color=nextcord.Color.blue()))
+        await ctx.send(embed=discord.Embed(description="✅ Queue finished! I'm leaving the channel.", color=discord.Color.blue()))
         await ctx.voice_client.disconnect()
 
 
 # --- INTERACTIVE BUTTONS VIEW ---
-class PlayerControls(nextcord.ui.View):
+class PlayerControls(discord.ui.View):
     def __init__(self, ctx):
         super().__init__(timeout=None)
         self.ctx = ctx
 
-    @nextcord.ui.button(label="⏸️ Pause", style=nextcord.ButtonStyle.secondary)
-    async def pause_button(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    @discord.ui.button(label="⏸️ Pause", style=discord.ButtonStyle.secondary)
+    async def pause_button(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.ctx.voice_client and self.ctx.voice_client.is_playing():
             self.ctx.voice_client.pause()
             await interaction.response.send_message("Playback paused.", ephemeral=True)
         else:
             await interaction.response.send_message("Nothing is playing.", ephemeral=True)
 
-    @nextcord.ui.button(label="▶️ Resume", style=nextcord.ButtonStyle.secondary)
-    async def resume_button(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    @discord.ui.button(label="▶️ Resume", style=discord.ButtonStyle.secondary)
+    async def resume_button(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.ctx.voice_client and self.ctx.voice_client.is_paused():
             self.ctx.voice_client.resume()
             await interaction.response.send_message("Playback resumed.", ephemeral=True)
         else:
             await interaction.response.send_message("Playback is not paused.", ephemeral=True)
 
-    @nextcord.ui.button(label="⏭️ Skip", style=nextcord.ButtonStyle.primary)
-    async def skip_button(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    @discord.ui.button(label="⏭️ Skip", style=discord.ButtonStyle.primary)
+    async def skip_button(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.ctx.voice_client and self.ctx.voice_client.is_playing():
             self.ctx.voice_client.stop()
             await interaction.response.send_message("Song skipped.", ephemeral=True)
         else:
             await interaction.response.send_message("Nothing to skip.", ephemeral=True)
 
-    @nextcord.ui.button(label="⏹️ Stop", style=nextcord.ButtonStyle.danger)
-    async def stop_button(self, button: nextcord.ui.Button, interaction: nextcord.Interaction):
+    @discord.ui.button(label="⏹️ Stop", style=discord.ButtonStyle.danger)
+    async def stop_button(self, button: discord.ui.Button, interaction: discord.Interaction):
         if self.ctx.voice_client:
             bot.queues[self.ctx.guild.id] = []
             self.ctx.voice_client.stop()
@@ -107,7 +102,6 @@ async def on_ready():
 
 @bot.command()
 async def join(ctx):
-    """Makes the bot join the voice channel of the command author."""
     if not ctx.author.voice:
         await ctx.send(f"{ctx.author.name} is not connected to a voice channel.")
         return
@@ -121,7 +115,6 @@ async def join(ctx):
 
 @bot.command()
 async def play(ctx, *, search: str):
-    """Adds a song to the queue and starts playing if the queue was empty."""
     if not ctx.author.voice:
         await ctx.send("You need to be in a voice channel to use this command.")
         return
@@ -168,10 +161,10 @@ async def play(ctx, *, search: str):
         bot.queues[guild_id] = []
     bot.queues[guild_id].append(song)
     
-    embed = nextcord.Embed(
+    embed = discord.Embed(
         title="✅ Added to Queue",
         description=f"**[{song['title']}]({song['webpage_url']})**",
-        color=nextcord.Color.blue()
+        color=discord.Color.blue()
     )
     embed.set_thumbnail(url=song['thumbnail'])
     embed.add_field(name="Position in queue", value=len(bot.queues[guild_id]))
@@ -182,7 +175,6 @@ async def play(ctx, *, search: str):
 
 @bot.command()
 async def pause(ctx):
-    """Pauses the current song."""
     if ctx.voice_client and ctx.voice_client.is_playing():
         ctx.voice_client.pause()
         await ctx.send("⏸️ Playback paused.")
@@ -191,7 +183,6 @@ async def pause(ctx):
 
 @bot.command()
 async def resume(ctx):
-    """Resumes the current song."""
     if ctx.voice_client and ctx.voice_client.is_paused():
         ctx.voice_client.resume()
         await ctx.send("▶️ Playback resumed.")
@@ -200,13 +191,12 @@ async def resume(ctx):
 
 @bot.command()
 async def queue(ctx):
-    """Displays the current song queue."""
     guild_id = ctx.guild.id
     if guild_id not in bot.queues or not bot.queues[guild_id]:
-        await ctx.send(embed=nextcord.Embed(description="The queue is currently empty.", color=nextcord.Color.orange()))
+        await ctx.send(embed=discord.Embed(description="The queue is currently empty.", color=discord.Color.orange()))
         return
 
-    embed = nextcord.Embed(title="🎶 Current Queue", color=nextcord.Color.purple())
+    embed = discord.Embed(title="🎶 Current Queue", color=discord.Color.purple())
     queue_list = ""
     for i, song in enumerate(bot.queues[guild_id][:10]):
         queue_list += f"`{i+1}.` [{song['title']}]({song['webpage_url']}) | Requested by {song['requester'].mention}\n"
@@ -217,7 +207,6 @@ async def queue(ctx):
 
 @bot.command()
 async def skip(ctx):
-    """Skips the current song."""
     if ctx.voice_client and ctx.voice_client.is_playing():
         ctx.voice_client.stop()
         await ctx.send("⏭️ Song skipped!")
@@ -226,7 +215,6 @@ async def skip(ctx):
 
 @bot.command()
 async def stop(ctx):
-    """Stops playback, clears the queue, and disconnects."""
     if ctx.voice_client:
         bot.queues[ctx.guild.id] = []
         ctx.voice_client.stop()
@@ -235,11 +223,10 @@ async def stop(ctx):
         
 @bot.command()
 async def resetvoice(ctx):
-    """Disconnects and reconnects the bot to fix voice issues."""
     if ctx.voice_client:
         channel = ctx.voice_client.channel
         await ctx.voice_client.disconnect()
-        await asyncio.sleep(1) # Give it a second to disconnect cleanly
+        await asyncio.sleep(1)
         await channel.connect()
         await ctx.send(f"🎤 Voice connection has been reset in **{channel.name}**.")
     else:
