@@ -38,7 +38,8 @@ status_cycler = itertools.cycle(statuses)
 async def change_status():
     """Cycles through the bot's statuses every 15 seconds."""
     new_status = next(status_cycler)
-    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=new_status))
+    # The only change is adding "status=discord.Status.idle" here
+    await bot.change_presence(status=discord.Status.idle, activity=discord.Activity(type=discord.ActivityType.listening, name=new_status))
 
 # --- HELPER FUNCTION TO START PLAYBACK ---
 async def play_next(ctx):
@@ -280,4 +281,5 @@ async def help(ctx):
 
 # --- RUN THE BOT ---
 bot.run(os.environ['DISCORD_TOKEN'])
+
 
