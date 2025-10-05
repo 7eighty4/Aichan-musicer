@@ -9,6 +9,7 @@ Created by: [@7eighty4](https://github.com/7eighty4)
 ## Features
 
 Plays music in your server vc
+
 ---
 
 ## How to Use
@@ -37,8 +38,6 @@ You can also use the interactive buttons on the "Now Playing"
 - **Hosting:** Railway
 - **Deployment:** Docker
 
----
+--
 
-## My Development Journey
-
-This project was a significant learning experience in backend development and DevOps. The initial deployment on Railway using Nixpacks presented several dependency challenges, particularly with FFmpeg and Opus. To solve this, I migrated the entire project to a `Dockerfile` deployment, which provided a stable and reliable environment. This process taught me a great deal about containerization, dependency management, and professional deployment workflows.
+7eighty4
