@@ -1,4 +1,4 @@
 nextcord
-yt-dlp
 PyNaCl
+yt-dlp
 python-dotenv
