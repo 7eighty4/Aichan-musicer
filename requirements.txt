@@ -1,0 +1,6 @@
+nextcord
+yt-dlp
+PyNaCl
+python-dotenv
+os
+asyncio
