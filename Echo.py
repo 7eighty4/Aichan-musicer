@@ -117,6 +117,7 @@ class PlayerControls(discord.ui.View):
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
+    await bot.change_presence(status=discord.Status.idle)
     change_status.start() # Start the status cycling task
 
 @bot.command()
@@ -279,3 +280,4 @@ async def help(ctx):
 
 # --- RUN THE BOT ---
 bot.run(os.environ['DISCORD_TOKEN'])
+
