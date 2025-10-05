@@ -24,4 +24,5 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # The command to run when the server starts
-CMD ["python", "Musicerv2.py"]
+
+CMD ["python", "Echo.py"]
