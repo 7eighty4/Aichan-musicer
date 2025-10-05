@@ -12,7 +12,8 @@ load_dotenv() # Loads the .env file with your token
 # --- BOT SETUP ---
 intents = discord.Intents.default()
 intents.message_content = True
-bot = commands.Bot(command_prefix="!", intents=intents)
+# Remove the default help command so we can create our own
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 # --- GLOBAL STATE ---
 bot.queues = {}
@@ -23,14 +24,13 @@ FFMPEG_OPTIONS = {
     'options': '-vn'
 }
 
-# --- NEW: ROTATING STATUS SETUP ---
-# Create a list of statuses for the bot to cycle through
+# --- ROTATING STATUS SETUP ---
 statuses = [
-    "Listening to your requests!",
+    " your requests!",
     "I personally love EDM",
-    "Listening to @7eighty4",
+    " @7eighty4",
     "Type !play <song name>",
-    "Echoing"
+    "Echoes"
 ]
 status_cycler = itertools.cycle(statuses)
 
@@ -251,6 +251,31 @@ async def resetvoice(ctx):
         await ctx.send(f"🎤 Voice connection has been reset in **{channel.name}**.")
     else:
         await ctx.send("I'm not in a voice channel to reset.")
+
+# --- NEW: HELP COMMAND ---
+@bot.command()
+async def help(ctx):
+    """Displays the help message with all commands."""
+    
+    embed = discord.Embed(
+        title="Echo Bot Commands",
+        description="Here is a list of all available commands to control the music.",
+        color=discord.Color.purple()
+    )
+    
+    embed.set_thumbnail(url=bot.user.display_avatar.url)
+    
+    embed.add_field(name="`!play <song name>`", value="Searches for a song and adds it to the queue.", inline=False)
+    embed.add_field(name="`!queue`", value="Displays the current song queue.", inline=False)
+    embed.add_field(name="`!skip`", value="Skips the current song.", inline=False)
+    embed.add_field(name="`!pause` / `!resume`", value="Pauses or resumes the music.", inline=False)
+    embed.add_field(name="`!stop`", value="Stops playback, clears the queue, and disconnects.", inline=False)
+    embed.add_field(name="`!join`", value="Summons the bot to your voice channel.", inline=False)
+    embed.add_field(name="`!resetvoice`", value="Resets the bot's voice connection if it's bugged.", inline=False)
+    
+    embed.set_footer(text="You can also use the buttons on the 'Now Playing' message for quick controls!")
+    
+    await ctx.send(embed=embed)
 
 # --- RUN THE BOT ---
 bot.run(os.environ['DISCORD_TOKEN'])
