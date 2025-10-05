@@ -1,3 +1,0 @@
-nextcord
-yt-dlp
-PyNaCl
