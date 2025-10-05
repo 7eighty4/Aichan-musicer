@@ -4,6 +4,7 @@ import yt_dlp
 import asyncio
 import os
 from dotenv import load_dotenv
+import traceback # Import the traceback module
 
 load_dotenv() # Loads the .env file with your token
 
@@ -27,7 +28,6 @@ async def play_next(ctx):
     if guild_id in bot.queues and bot.queues[guild_id]:
         song = bot.queues[guild_id].pop(0)
         
-        # --- NEW: ADDED ERROR HANDLING ---
         try:
             source = nextcord.FFmpegPCMAudio(song['stream_url'], **FFMPEG_OPTIONS)
             
@@ -39,19 +39,22 @@ async def play_next(ctx):
             embed.set_thumbnail(url=song['thumbnail'])
             embed.add_field(name="Requested by", value=song['requester'].mention)
             
-            # The 'after' callback ensures the next song plays when this one finishes
             ctx.voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(ctx), bot.loop))
             
             await ctx.send(embed=embed, view=PlayerControls(ctx))
 
         except Exception as e:
-            # If an error occurs, send a message and print it to the console
-            error_embed = nextcord.Embed(title="❌ Playback Error", description=f"An error occurred: `{e}`", color=nextcord.Color.red())
+            # Send a generic error to Discord
+            error_embed = nextcord.Embed(title="❌ Playback Error", description="An unknown error occurred. Please check the logs for details.", color=nextcord.Color.red())
             await ctx.send(embed=error_embed)
-            print(f"Error in play_next: {e}")
+            
+            # Print the FULL detailed error to your Railway logs
+            print("--- An error occurred in play_next ---")
+            traceback.print_exc()
+            print("------------------------------------")
+            
             # Try to play the next song in the queue if there is one
             await play_next(ctx)
-        # --- END OF ERROR HANDLING ---
 
     else:
         await ctx.send(embed=nextcord.Embed(description="✅ Queue finished! I'm leaving the channel.", color=nextcord.Color.blue()))
@@ -230,7 +233,6 @@ async def stop(ctx):
         await ctx.voice_client.disconnect()
         await ctx.send("⏹️ Playback stopped, queue cleared, and disconnected.")
         
-# --- NEW: VOICE RESET COMMAND ---
 @bot.command()
 async def resetvoice(ctx):
     """Disconnects and reconnects the bot to fix voice issues."""
