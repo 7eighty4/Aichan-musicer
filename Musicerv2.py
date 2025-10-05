@@ -26,19 +26,33 @@ async def play_next(ctx):
     guild_id = ctx.guild.id
     if guild_id in bot.queues and bot.queues[guild_id]:
         song = bot.queues[guild_id].pop(0)
-        source = nextcord.FFmpegPCMAudio(song['stream_url'], **FFMPEG_OPTIONS)
         
-        embed = nextcord.Embed(
-            title="🎵 Now Playing",
-            description=f"**[{song['title']}]({song['webpage_url']})**",
-            color=nextcord.Color.green()
-        )
-        embed.set_thumbnail(url=song['thumbnail'])
-        embed.add_field(name="Requested by", value=song['requester'].mention)
-        
-        ctx.voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(ctx), bot.loop))
-        
-        await ctx.send(embed=embed, view=PlayerControls(ctx))
+        # --- NEW: ADDED ERROR HANDLING ---
+        try:
+            source = nextcord.FFmpegPCMAudio(song['stream_url'], **FFMPEG_OPTIONS)
+            
+            embed = nextcord.Embed(
+                title="🎵 Now Playing",
+                description=f"**[{song['title']}]({song['webpage_url']})**",
+                color=nextcord.Color.green()
+            )
+            embed.set_thumbnail(url=song['thumbnail'])
+            embed.add_field(name="Requested by", value=song['requester'].mention)
+            
+            # The 'after' callback ensures the next song plays when this one finishes
+            ctx.voice_client.play(source, after=lambda e: asyncio.run_coroutine_threadsafe(play_next(ctx), bot.loop))
+            
+            await ctx.send(embed=embed, view=PlayerControls(ctx))
+
+        except Exception as e:
+            # If an error occurs, send a message and print it to the console
+            error_embed = nextcord.Embed(title="❌ Playback Error", description=f"An error occurred: `{e}`", color=nextcord.Color.red())
+            await ctx.send(embed=error_embed)
+            print(f"Error in play_next: {e}")
+            # Try to play the next song in the queue if there is one
+            await play_next(ctx)
+        # --- END OF ERROR HANDLING ---
+
     else:
         await ctx.send(embed=nextcord.Embed(description="✅ Queue finished! I'm leaving the channel.", color=nextcord.Color.blue()))
         await ctx.voice_client.disconnect()
@@ -115,22 +129,17 @@ async def play(ctx, *, search: str):
     guild_id = ctx.guild.id
     await ctx.send(f"🔎 Searching for: **{search}**...")
 
-    # --- YDL OPTIONS WITH COOKIE HANDLING ---
-    # Create the options dictionary for this specific request
     ydl_opts = {
         'format': 'bestaudio[ext=m4a]/bestaudio/best',
         'noplaylist': 'True',
         'quiet': True,
     }
 
-    # Write cookies to a file if they exist in the environment variables
     cookie_file_path = "cookies.txt"
     if 'YOUTUBE_COOKIES' in os.environ:
         with open(cookie_file_path, 'w') as f:
             f.write(os.environ['YOUTUBE_COOKIES'])
-        # Tell yt-dlp to use the cookies file
         ydl_opts['cookiefile'] = cookie_file_path
-    # --- END OF YDL OPTIONS ---
 
     loop = asyncio.get_event_loop()
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -220,7 +229,19 @@ async def stop(ctx):
         ctx.voice_client.stop()
         await ctx.voice_client.disconnect()
         await ctx.send("⏹️ Playback stopped, queue cleared, and disconnected.")
+        
+# --- NEW: VOICE RESET COMMAND ---
+@bot.command()
+async def resetvoice(ctx):
+    """Disconnects and reconnects the bot to fix voice issues."""
+    if ctx.voice_client:
+        channel = ctx.voice_client.channel
+        await ctx.voice_client.disconnect()
+        await asyncio.sleep(1) # Give it a second to disconnect cleanly
+        await channel.connect()
+        await ctx.send(f"🎤 Voice connection has been reset in **{channel.name}**.")
+    else:
+        await ctx.send("I'm not in a voice channel to reset.")
 
 # --- RUN THE BOT ---
-# This line loads the token from your .env file or hosting service variables
 bot.run(os.environ['DISCORD_TOKEN'])
